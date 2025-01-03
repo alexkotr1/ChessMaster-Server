@@ -33,8 +33,6 @@ public class Game implements WebSocketMessageListener {
         this.white = white;
         games.add(this);
         state = State.HOST_JOINED;
-
-
     }
     public UUID getUuid() {
         return uuid;
@@ -65,22 +63,15 @@ public class Game implements WebSocketMessageListener {
         chessEngine.playChess();
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         Runnable task = chessEngine::notifyTimers;
-        Runnable checkTimeOut = ()->{
-            if (state == State.PLAYER_EXITED) {
-                scheduler.shutdown();
-                return;
-            }
-            chessEngine.checkTimeOut();
+        Runnable checkGameEnd = () -> {
             if (chessEngine.chessBoard.getGameEnded()) {
-                Message msg = new Message();
-                msg.setCode(RequestCodes.ENEMY_MOVE);
-                msg.send(white, null);
-                msg.send(black, null);
                 state = State.GAME_ENDED;
+                scheduler.shutdownNow();
             }
+
         };
+        scheduler.scheduleAtFixedRate(checkGameEnd, 0, 1, TimeUnit.SECONDS);
         scheduler.scheduleAtFixedRate(task, 0, 10, TimeUnit.SECONDS);
-        scheduler.scheduleAtFixedRate(checkTimeOut, 0, 1, TimeUnit.SECONDS);
     }
     public static Game findGameBySession(Session session){
         return games.stream().filter(game -> game.getWhite().equals(session) || (game.getBlack() != null && game.getBlack().equals(session))).findFirst().orElse(null);
@@ -89,7 +80,25 @@ public class Game implements WebSocketMessageListener {
 
     @Override
     public void onMessageReceived(Message message, Session session) {
-        if (this.state == State.PLAYER_EXITED) return;
+        System.out.println("Received message on state " + state);
+        if (state == State.GAME_ENDED) {
+            if (message.getCode() == RequestCodes.PLAY_AGAIN){
+                playAgain[session.equals(white) ? 0 : 1] = true;
+                if (playAgain[0] == playAgain[1]){
+                    this.state = State.PLAYER_EXITED;
+                    games.remove(this);
+                    chessEngine = null;
+                    Game game = new Game(null,white,timerMinutes);
+                    game.setBlack(black);
+                    game.start();
+                    Message playAgain = new Message();
+                    playAgain.setCode(RequestCodes.PLAY_AGAIN_ACCEPTED);
+                    playAgain.send(white,null);
+                    playAgain.send(black,null);
+                }
+            }
+            return;
+        }
         Message res = new Message();
         try {
             switch (message.getCode()) {
@@ -187,21 +196,6 @@ public class Game implements WebSocketMessageListener {
                     notifyPlayer.setCode(RequestCodes.ENEMY_MOVE);
                     notifyPlayer.setData(false);
                     notifyPlayer.send(session.equals(white) ? black : white,null);
-                }
-                case PLAY_AGAIN -> {
-                    playAgain[session.equals(white) ? 0 : 1] = true;
-                    if (playAgain[0] == playAgain[1]){
-                        this.state = State.PLAYER_EXITED;
-                        games.remove(this);
-                        chessEngine = null;
-                        Game game = new Game(null,white,timerMinutes);
-                        game.setBlack(black);
-                        game.start();
-                        Message playAgain = new Message();
-                        playAgain.setCode(RequestCodes.PLAY_AGAIN_ACCEPTED);
-                        playAgain.send(white,null);
-                        playAgain.send(black,null);
-                    }
                 }
             }
         } catch (Exception e) {

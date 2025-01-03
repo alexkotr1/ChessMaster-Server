@@ -14,15 +14,13 @@ public class ChessEngine {
     ArrayList<int[]> allPositions = new ArrayList<>();
     private final Session white;
     private Session black;
-    private long whiteTimeRemaining;
-    private long blackTimeRemaining;
-    private boolean whiteTimerRunning = false;
-    private long timerStart;
+    private Timer whiteTimer;
+    private Timer blackTimer;
+    private final int timerMinutes;
     public ChessEngine(Session white, Session black, int timerMinutes) {
         this.white = white;
         this.black = black;
-        blackTimeRemaining = timerMinutes * 60000L;
-        whiteTimeRemaining = timerMinutes * 60000L;
+        this.timerMinutes = timerMinutes;
         for (int x = 1;x<=8;x++) {
             for (int y = 1; y <= 8; y++) {
                 allPositions.add(new int[]{x, y});
@@ -32,7 +30,29 @@ public class ChessEngine {
     public void playChess(){
         chessBoard.loadBoard();
         chessBoard.printBoard();
-        startWhiteTimer();
+        whiteTimer = new Timer(1000, (long) timerMinutes * 60 * 1000) {
+            @Override
+            protected void onFinish() {
+                chessBoard.setGameEnded(true,Winner.Black);
+                Message msg = new Message();
+                msg.setCode(RequestCodes.ENEMY_MOVE);
+                msg.send(white, null);
+                msg.send(black, null);
+            }
+        };
+        blackTimer = new Timer(1000, (long) timerMinutes * 60 * 1000) {
+            @Override
+            protected void onFinish() {
+                chessBoard.setGameEnded(true,Winner.White);
+                Message msg = new Message();
+                msg.setCode(RequestCodes.ENEMY_MOVE);
+                msg.send(white, null);
+                msg.send(black, null);
+            }
+        };
+        whiteTimer.start();
+        blackTimer.start();
+        blackTimer.pause();
     }
     public ArrayList<Pioni> nextMove(char xOrig, int yOrig, char xDest, int yDest){
         Pioni p = chessBoard.getPioniAt(xOrig,yOrig);
@@ -74,14 +94,6 @@ public class ChessEngine {
         }
         return moved;
     }
-    public void checkTimeOut(){
-        updateTimers();
-        if (whiteTimeRemaining <= 0){
-            chessBoard.setGameEnded(true,Winner.Black);
-        } else if (blackTimeRemaining <= 0){
-            chessBoard.setGameEnded(true,Winner.White);
-        }
-    }
     public void notifyKingCheck(boolean isWhite, boolean isChecked){
         Message message = new Message();
         message.setCode(isWhite ? RequestCodes.KING_CHECK_WHITE : RequestCodes.KING_CHECK_BLACK);
@@ -90,12 +102,20 @@ public class ChessEngine {
         message.send(black,null);
     }
     public void notifyTimers(){
-        updateTimers();
         Message whiteNotification = new Message();
         whiteNotification.setCode(RequestCodes.TIMER);
-        whiteNotification.setData(new long[]{whiteTimeRemaining, blackTimeRemaining});
+        whiteNotification.setData(new long[]{whiteTimer.getRemainingTime(), blackTimer.getRemainingTime()});
         whiteNotification.send(white,null);
         whiteNotification.send(black, null);
+    }
+    private void toggleTimer(){
+        if (chessBoard.getWhiteTurn()){
+            whiteTimer.resume();
+            blackTimer.pause();
+            return;
+        }
+        whiteTimer.pause();
+        blackTimer.resume();
     }
     public void checkGameEnd(boolean white){
         if (checkKingMat(chessBoard, !white)) {
@@ -194,48 +214,8 @@ public class ChessEngine {
         return ChessEngine.checkKingMat(testChessBoard,p.getIsWhite());
     }
 
-    private void startWhiteTimer() {
-        if (!chessBoard.getWhiteTurn()) updateTimers();
-        timerStart = System.currentTimeMillis();
-    }
 
-    private void startBlackTimer() {
-        if (chessBoard.getWhiteTurn()) updateTimers();
-        timerStart = System.currentTimeMillis();
-    }
-
-
-    private void updateTimers() {
-        long currentTime = System.currentTimeMillis();
-        long elapsed = currentTime - timerStart;
-
-        if (whiteTimerRunning) {
-            whiteTimeRemaining -= elapsed;
-            if (whiteTimeRemaining <= 0) {
-                chessBoard.setGameEnded(true, Winner.Black);
-            }
-        } else {
-            blackTimeRemaining -= elapsed;
-            if (blackTimeRemaining <= 0) {
-                chessBoard.setGameEnded(true, Winner.White);
-            }
-        }
-
-        timerStart = currentTime;
-    }
-    private void toggleTimer() {
-        updateTimers();
-        if (chessBoard.getWhiteTurn()) {
-            whiteTimerRunning = true;
-            startWhiteTimer();
-        } else {
-            whiteTimerRunning = false;
-            startBlackTimer();
-        }
-    }
-    public int getMinutesAllowed(){
-        return (int) (whiteTimeRemaining / 60000L);
-    }
+    public int getMinutesAllowed(){ return timerMinutes; }
     public ChessBoard getBoard() { return chessBoard; }
 
 
