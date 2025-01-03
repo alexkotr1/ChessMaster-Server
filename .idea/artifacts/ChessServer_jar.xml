@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="ChessServer:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/ChessServer_jar</output-path>
+    <root id="archive" name="ChessServer.jar">
+      <element id="module-output" name="ChessServer" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/google/code/gson/gson/2.8.9/gson-2.8.9.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/jakarta/websocket/jakarta.websocket-client-api/2.2.0/jakarta.websocket-client-api-2.2.0.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/jakarta/websocket/jakarta.websocket-api/2.2.0/jakarta.websocket-api-2.2.0.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
