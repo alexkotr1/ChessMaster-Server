@@ -80,7 +80,6 @@ public class Game implements WebSocketMessageListener {
 
     @Override
     public void onMessageReceived(Message message, Session session) {
-        System.out.println("Received message on state " + state);
         if (state == State.GAME_ENDED) {
             if (message.getCode() == RequestCodes.PLAY_AGAIN){
                 playAgain[session.equals(white) ? 0 : 1] = true;
