@@ -75,6 +75,7 @@ public class ChessEngine {
         return moved;
     }
     public void checkTimeOut(){
+        updateTimers();
         if (whiteTimeRemaining <= 0){
             chessBoard.setGameEnded(true,Winner.Black);
         } else if (blackTimeRemaining <= 0){
@@ -208,7 +209,7 @@ public class ChessEngine {
         long currentTime = System.currentTimeMillis();
         long elapsed = currentTime - timerStart;
 
-        if (chessBoard.getWhiteTurn()) {
+        if (whiteTimerRunning) {
             whiteTimeRemaining -= elapsed;
             if (whiteTimeRemaining <= 0) {
                 chessBoard.setGameEnded(true, Winner.Black);
@@ -220,12 +221,17 @@ public class ChessEngine {
             }
         }
 
-        timerStart = currentTime; // Reset the timer start
+        timerStart = currentTime;
     }
     private void toggleTimer() {
-        if (whiteTimerRunning)
+        updateTimers();
+        if (chessBoard.getWhiteTurn()) {
+            whiteTimerRunning = true;
+            startWhiteTimer();
+        } else {
+            whiteTimerRunning = false;
             startBlackTimer();
-        else startWhiteTimer();
+        }
     }
     public int getMinutesAllowed(){
         return (int) (whiteTimeRemaining / 60000L);
