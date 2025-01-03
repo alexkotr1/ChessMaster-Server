@@ -23,7 +23,7 @@ public class Game implements WebSocketMessageListener {
     private final Session white;
     private final boolean[] playAgain = new boolean[2];
     private Session black;
-    private int timerMinutes;
+    private final int timerMinutes;
     public State state;
     public Game(String code, Session white, int timerMinutes) {
         this.timerMinutes = timerMinutes;
@@ -90,7 +90,6 @@ public class Game implements WebSocketMessageListener {
     @Override
     public void onMessageReceived(Message message, Session session) {
         if (this.state == State.PLAYER_EXITED) return;
-        System.out.println("Received Message on State " + state);
         Message res = new Message();
         try {
             switch (message.getCode()) {
@@ -149,7 +148,6 @@ public class Game implements WebSocketMessageListener {
                     }
                     res.setData(Message.mapper.writeValueAsString(moved));
                     res.setCode(RequestCodes.REQUEST_MOVE_RESULT);
-                    chessEngine.chessBoard.printBoard();
                     res.send(session, message);
                     if (moved == null || moved.isEmpty()) return;
                     for (Pioni p : moved) {
