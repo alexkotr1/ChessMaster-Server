@@ -43,7 +43,7 @@ public class WebSocket {
         } else if (game == null && m.getCode() == RequestCodes.HOST_GAME){
             try {
                 int time = Message.mapper.readValue(m.getData(),int.class);
-                game = new Game(generateCode(),session,time);
+                game = new Game(Game.generateCode(),session,time);
                 Message res = new Message();
                 res.setCode(RequestCodes.HOST_GAME_RESULT);
                 res.setData(game.getCode());
@@ -76,13 +76,5 @@ public class WebSocket {
             System.out.println("WebSocket server stopped.");
         }
     }
-    public static String generateCode() {
-        StringBuilder word = new StringBuilder();
-        Random random = new Random();
-        for (int i = 0; i < 5; i++) {
-            char randomChar = (char) ('A' + random.nextInt(26));
-            word.append(randomChar);
-        }
-        return word.toString();
-    }
+
 }

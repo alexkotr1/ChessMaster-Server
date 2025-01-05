@@ -4,10 +4,7 @@ package alexk.chess;
 import alexk.chess.Pionia.Pioni;
 import jakarta.websocket.Session;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -87,7 +84,7 @@ public class Game implements WebSocketMessageListener {
                     this.state = State.PLAYER_EXITED;
                     games.remove(this);
                     chessEngine = null;
-                    Game game = new Game(null,white,timerMinutes);
+                    Game game = new Game(generateCode(),white,timerMinutes);
                     game.setBlack(black);
                     game.start();
                     Message playAgain = new Message();
@@ -201,7 +198,15 @@ public class Game implements WebSocketMessageListener {
             System.err.println(e.getMessage());
         }
     }
-
+    public static String generateCode() {
+        StringBuilder word = new StringBuilder();
+        Random random = new Random();
+        for (int i = 0; i < 5; i++) {
+            char randomChar = (char) ('A' + random.nextInt(26));
+            word.append(randomChar);
+        }
+        return word.toString();
+    }
     @Override
     public void onCloseReceived(Session session) {
         if (session == white || session == black) {
