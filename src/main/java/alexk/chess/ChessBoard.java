@@ -1,6 +1,7 @@
 package alexk.chess;
 
 import alexk.chess.Pionia.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import java.util.ArrayList;
@@ -14,6 +15,8 @@ public class ChessBoard {
     private Boolean gameEnded = false;
     private ChessEngine.Winner winner = null;
     private String state = UUID.randomUUID().toString();
+    @JsonIgnore
+    public int totalMoves = 1;
     public void placePioniAt(Pioni p, char xPos, int yPos){
         p.setXPos(xPos);
         p.setYPos(yPos);
@@ -27,29 +30,29 @@ public class ChessBoard {
     }
     public void loadBoard(){
         for (int x = 1;x<=16;x++){
-            pionia.add(new Stratiotis(x < 9,this, Utilities.int2Char(x < 9 ? x : x - 8 ),x < 9 ? 2 : 7,null,false));
+            pionia.add(new Stratiotis(x < 9,this, Utilities.int2Char(x < 9 ? x : x - 8 ),x < 9 ? 2 : 7,null,false,null,null));
         }
         for (int x = 0;x<2;x++){
             for (int y = 0;y<4;y++){
                 switch (y){
                     case 0:{
-                        pionia.add(new Pyrgos(x == 0,this,'A',x == 0 ? 1 : 8,null,false));
-                        pionia.add(new Pyrgos(x == 0,this,'H',x == 0 ? 1 : 8,null,false));
+                        pionia.add(new Pyrgos(x == 0,this,'A',x == 0 ? 1 : 8,null,false, false, false));
+                        pionia.add(new Pyrgos(x == 0,this,'H',x == 0 ? 1 : 8,null,false,false, true));
                         break;
                     }
                     case 1:{
-                        pionia.add(new Alogo(x == 0,this,'B',x == 0 ? 1 : 8,null,false));
-                        pionia.add(new Alogo(x == 0,this,'G',x == 0 ? 1 : 8,null,false));
+                        pionia.add(new Alogo(x == 0,this,'B',x == 0 ? 1 : 8,null,false,null,null));
+                        pionia.add(new Alogo(x == 0,this,'G',x == 0 ? 1 : 8,null,false,null,null));
                         break;
                     }
                     case 2:{
-                        pionia.add(new Stratigos(x == 0,this,'C',x == 0 ? 1 : 8,null,false));
-                        pionia.add(new Stratigos(x == 0,this,'F',x == 0 ? 1 : 8,null,false));
+                        pionia.add(new Stratigos(x == 0,this,'C',x == 0 ? 1 : 8,null,false,null,null));
+                        pionia.add(new Stratigos(x == 0,this,'F',x == 0 ? 1 : 8,null,false,null,null));
                         break;
                     }
                     case 3:{
-                        pionia.add(new Vasilissa(x == 0,this,'D',x == 0 ? 1 : 8,null,false));
-                        pionia.add(new Vasilias(x == 0,this,'E',x == 0 ? 1 : 8,null,false));
+                        pionia.add(new Vasilissa(x == 0,this,'D',x == 0 ? 1 : 8,null,false,false,null));
+                        pionia.add(new Vasilias(x == 0,this,'E',x == 0 ? 1 : 8,null,false,null,null));
                         break;
                     }
                 }
@@ -112,6 +115,19 @@ public class ChessBoard {
         }
         System.out.println("  ------------------------\n   a  b  c  d  e  f  g  h");
 
+    }
+    public boolean castlingRights(boolean white, boolean kingSide){
+        Vasilias king = null;
+        Pyrgos rook = null;
+        for (Pioni p : getPionia()){
+            if (p.getIsWhite() == white){
+                if (p.getType().equals("Vasilias")) king = (Vasilias) p;
+                else if (p.getType().equals("Pyrgos")){
+                    if (((Pyrgos) p).getKingSide() == kingSide) rook = (Pyrgos) p;
+                }
+            }
+        }
+        return king != null && rook != null && !king.getMoved() && !rook.getMoved();
     }
     @Override
     protected ChessBoard clone() {

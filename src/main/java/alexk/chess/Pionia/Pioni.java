@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -33,13 +35,20 @@ public abstract class Pioni {
     private final String id;
     private String imagePath;
     private boolean captured;
-    public Pioni(Boolean isWhite, ChessBoard chessBoard, char initialX, int initialY, String id, Boolean captured) {
+    private Boolean moved;
+    private Boolean kingSide;
+    @JsonIgnore
+    private final Logger logger = LogManager.getLogger(Pioni.class);
+
+    public Pioni(Boolean isWhite, ChessBoard chessBoard, char initialX, int initialY, String id, Boolean captured, Boolean moved, Boolean kingSide) {
         this.id = id == null ? UUID.randomUUID().toString() : id;
         position[0] = Utilities.char2Int(initialX);
         position[1] = initialY;
         this.type = this.getClass().getSimpleName();
         this.isWhite = isWhite;
         this.chessBoard = chessBoard;
+        this.moved = moved;
+        this.kingSide = kingSide;
         if (captured != null) this.captured = captured;
 
         switch (this.type){
@@ -159,6 +168,11 @@ public abstract class Pioni {
     public void setCaptured(Boolean captured){ this.captured = captured; }
     public Boolean getCaptured(){ return captured; }
     public String getID(){ return id; }
+    public void setMoved(Boolean moved){ this.moved = moved; }
+    public Boolean getMoved(){ return moved != null && moved; }
+    public void setKingSide(Boolean kingSide){ this.kingSide = kingSide; }
+    public Boolean getKingSide(){ return kingSide; }
+
     public static void printRoute(ArrayList<int[]> route){
         if (route == null || route.isEmpty()) {
             return;
@@ -176,12 +190,13 @@ public abstract class Pioni {
     public Pioni clone() {
         try {
             Pioni cloned = this.getClass()
-                    .getConstructor(Boolean.class, ChessBoard.class, char.class, int.class, String.class, Boolean.class)
-                    .newInstance(this.isWhite, null, Utilities.int2Char(this.position[0]), this.position[1], this.id, this.captured);
+                    .getConstructor(Boolean.class, ChessBoard.class, char.class, int.class, String.class, Boolean.class, Boolean.class, Boolean.class)
+                    .newInstance(this.isWhite, null, Utilities.int2Char(this.position[0]), this.position[1], this.id, this.captured, this.moved != null && this.moved, this.kingSide != null && this.kingSide);
             cloned.setImagePath(this.getImagePath());
             return cloned;
         } catch (Exception e) {
-            throw new AssertionError("Clone operation failed", e);
+            logger.error("Clone operation failed on {}", this);
+            return null;
         }
     }
 

@@ -2,17 +2,19 @@ package alexk.chess;
 
 
 import alexk.chess.Pionia.Pioni;
+import alexk.chess.Stockfish.Client;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.websocket.Session;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class Game implements WebSocketMessageListener {
     public enum State { HOST_JOINED, BLACK_JOINED, GAME_STARTED, GAME_ENDED, PLAYER_EXITED}
-
+    private static final Logger logger = LogManager.getLogger(Game.class);
     private static final ArrayList<Game> games = new ArrayList<>();
     private final UUID uuid;
     private final String code;
@@ -21,15 +23,23 @@ public class Game implements WebSocketMessageListener {
     private final boolean[] playAgain = new boolean[2];
     private Session black;
     private final int timerMinutes;
+    private Boolean vsAI;
     public State state;
-    public Game(String code, Session white, int timerMinutes) {
+    private Client client;
+    public Game(String code, Session white, int timerMinutes, boolean vsAI) {
         this.timerMinutes = timerMinutes;
-        chessEngine = new ChessEngine(white,null, timerMinutes);
+        chessEngine = new ChessEngine(white,null, timerMinutes, vsAI);
         uuid = UUID.randomUUID();
         this.code = code;
         this.white = white;
+        this.vsAI = vsAI;
         games.add(this);
         state = State.HOST_JOINED;
+        logger.info("New Game with ID: {} Code: {} vsAI: {}", uuid, code, vsAI);
+        if (vsAI){
+            client = new Client();
+            client.startEngine();
+        }
     }
     public UUID getUuid() {
         return uuid;
@@ -57,34 +67,48 @@ public class Game implements WebSocketMessageListener {
         return game;
     }
     public void start(){
+        logger.info("Game with ID: {} started", uuid);
         chessEngine.playChess();
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         Runnable task = chessEngine::notifyTimers;
         Runnable checkGameEnd = () -> {
-            if (chessEngine.chessBoard.getGameEnded()) {
-                state = State.GAME_ENDED;
-                scheduler.shutdownNow();
-            }
-
+            if (!chessEngine.chessBoard.getGameEnded()) return;
+            logger.info("Game with ID: {} ended", uuid);
+            state = State.GAME_ENDED;
+            scheduler.shutdownNow();
         };
         scheduler.scheduleAtFixedRate(checkGameEnd, 0, 1, TimeUnit.SECONDS);
         scheduler.scheduleAtFixedRate(task, 0, 10, TimeUnit.SECONDS);
     }
     public static Game findGameBySession(Session session){
+        logger.info("Searching game by session.");
         return games.stream().filter(game -> game.getWhite().equals(session) || (game.getBlack() != null && game.getBlack().equals(session))).findFirst().orElse(null);
     }
 
 
     @Override
     public void onMessageReceived(Message message, Session session) {
+        logger.info("Message received. ID: {} requestCode: {} Data:{} in Game: {}", message.getMessageID(), message.getCode(), message.getData(),getCode());
         if (state == State.GAME_ENDED) {
+            logger.info("State for Game Code: {} is ended", getCode());
+            if (vsAI){
+                this.state = State.PLAYER_EXITED;
+                games.remove(this);
+                chessEngine = null;
+                Game game = new Game(generateCode(),white,timerMinutes,true);
+                game.start();
+                Message playAgain = new Message();
+                playAgain.setCode(RequestCodes.PLAY_AGAIN_ACCEPTED);
+                playAgain.send(white,null);
+                return;
+            }
             if (message.getCode() == RequestCodes.PLAY_AGAIN){
                 playAgain[session.equals(white) ? 0 : 1] = true;
                 if (playAgain[0] == playAgain[1]){
                     this.state = State.PLAYER_EXITED;
                     games.remove(this);
                     chessEngine = null;
-                    Game game = new Game(generateCode(),white,timerMinutes);
+                    Game game = new Game(generateCode(),white,timerMinutes,false);
                     game.setBlack(black);
                     game.start();
                     Message playAgain = new Message();
@@ -99,22 +123,26 @@ public class Game implements WebSocketMessageListener {
         try {
             switch (message.getCode()) {
                 case GET_PIONIA -> {
+                    logger.info("Starting GET_PIONIA for Game: {}", getCode());
                     ArrayList<Pioni> pionia = chessEngine.chessBoard.getPionia();
                     res.setCode(RequestCodes.GET_PIONIA_RESULT);
                     res.setData(pionia);
                     res.send(session, message);
                 }
                 case GET_MOVES_REMAINING -> {
+                    logger.info("Starting GET_MOVES_REMAINING for Game: {}", getCode());
                     res.setCode(RequestCodes.GET_MOVES_REMAINING_RESULT);
                     res.setData(chessEngine.chessBoard.getMovesRemaining());
                     res.send(session, message);
                 }
                 case GET_WHITE_TURN -> {
+                    logger.info("Starting GET_WHITE_TURN for Game: {}", getCode());
                     res.setCode(RequestCodes.GET_WHITE_TURN_RESULT);
                     res.setData(chessEngine.chessBoard.getWhiteTurn());
                     res.send(session, message);
                 }
                 case GET_PIONI_AT_POS -> {
+                    logger.info("Starting GET_PIONI_AT_POS for Game: {}", getCode());
                     int[] pos = Message.mapper.readValue(message.getData(), int[].class);
                     Pioni pioni = chessEngine.chessBoard.getPioniAt(Utilities.int2Char(pos[0]),pos[1]);
                     res.setCode(RequestCodes.GET_PIONI_AT_POS_RESULT);
@@ -122,11 +150,13 @@ public class Game implements WebSocketMessageListener {
                     res.send(session, message);
                 }
                 case IS_GAME_ENDED ->{
+                    logger.info("Starting IS_GAME_ENDED for Game: {}", getCode());
                     res.setCode(RequestCodes.IS_GAME_ENDED_RESULT);
                     res.setData(chessEngine.chessBoard.getGameEnded());
                     res.send(session, message);
                 }
                 case CHECKMATE -> {
+                    logger.info("Starting CHECKMATE for Game: {}", getCode());
                     res.setCode(RequestCodes.CHECKMATE_RESULT);
                     boolean white = Boolean.parseBoolean(message.getData());
                     HashMap<Pioni,ArrayList<int[]>> legalMoves = chessEngine.kingCheckMate(white);
@@ -134,70 +164,140 @@ public class Game implements WebSocketMessageListener {
                     res.send(session, message);
                 }
                 case STALEMATE_CHECK -> {
+                    logger.info("Starting STALEMATE_CHECK for Game: {}", getCode());
                     res.setCode(RequestCodes.STALEMATE_CHECK_RESULT);
                     boolean white = Boolean.parseBoolean(res.getData());
                     res.setData(Message.mapper.writeValueAsString(chessEngine.stalemateCheck(white)));
                     res.send(session, message);
                 }
                 case REQUEST_CHESSBOARD -> {
+                    logger.info("Starting REQUEST_CHESSBOARD for Game: {}", getCode());
                     res.setCode(RequestCodes.REQUEST_CHESSBOARD_RESULT);
                     res.setData(Message.mapper.writeValueAsString(chessEngine.chessBoard));
                     res.send(session, message);
                 }
                 case REQUEST_MOVE -> {
+                    logger.info("Starting REQUEST_MOVE for Game: {}", getCode());
                     int[][] move = Message.mapper.readValue(message.getData(), int[][].class);
                     boolean currentTurn = chessEngine.chessBoard.getWhiteTurn();
                     ArrayList<Pioni> moved = null;
-                    if ((currentTurn && session == white) || (!currentTurn && session == black)) {
-                        moved = chessEngine.nextMove(Utilities.int2Char(move[0][0]),move[0][1],Utilities.int2Char(move[1][0]),move[1][1]);
+                    if ((currentTurn && session != white) || (currentTurn && session == black)) {
+                        finishUpMove(message, session, res, moved);
+                        return;
                     }
-                    res.setData(Message.mapper.writeValueAsString(moved));
-                    res.setCode(RequestCodes.REQUEST_MOVE_RESULT);
-                    res.send(session, message);
-                    if (moved == null || moved.isEmpty()) return;
-                    for (Pioni p : moved) {
-                        if (ChessEngine.checkKingMat(chessEngine.chessBoard, !p.getIsWhite())) {
-                            HashMap<Pioni, ArrayList<int[]>> legalMovesWhenEnemyKingThreatened = chessEngine.kingCheckMate(!p.getIsWhite());
-                            if (legalMovesWhenEnemyKingThreatened == null || legalMovesWhenEnemyKingThreatened.isEmpty()) chessEngine.getBoard().setGameEnded(true,p.getIsWhite() ? ChessEngine.Winner.White : ChessEngine.Winner.Black);
+                        char origX = Utilities.int2Char(move[0][0]);
+                        int origY = move[0][1];
+                        char destX = Utilities.int2Char(move[1][0]);
+                        int destY = move[1][1];
+                        Pioni p = chessEngine.getBoard().getPioniAt(origX, origY);
+                        if (!chessEngine.legalMove(origX, origY, destX, destY)) {
+                            finishUpMove(message, session, res, moved);
+                            return;
                         }
-                    }
-                    chessEngine.checkGameEnd(currentTurn);
-                    if (currentTurn != chessEngine.chessBoard.getWhiteTurn()){
-                        Message notifyPlayer = new Message();
-                        notifyPlayer.setCode(RequestCodes.ENEMY_MOVE);
-                        notifyPlayer.setData(true);
-                        notifyPlayer.send(session.equals(white) ? black : white,null);
-                    }
+                        moved = chessEngine.nextMove(origX,origY,destX,destY);
+                        Pioni upgradable = chessEngine.toBeUpgraded;
+                        finishUpMove(message, session, res, moved);
+                        if (upgradable == null) return;
+                        CompletableFuture<String> future = requestUpgrade(p.getIsWhite());
+                        future.thenAcceptAsync(str->{
+                            logger.info("Upgrading Pioni: {} in Game: {}", str, getCode());
+                            try {
+                                if (chessEngine.upgradePioni(upgradable,future.get())){
+                                    chessEngine.switchTurn();
+                                    notifyEnemyMove(true,false);
+                                    notifyEnemyMove(false,false);
+                                    chessEngine.toBeUpgraded = null;
+                                    chessEngine.checkGameEnd(session.equals(white));
+                                    if (vsAI) AIMove();
+                                }
+                            } catch (InterruptedException | ExecutionException e) {
+                                logger.error("Error trying to upgrade Pioni:", e);
+                            }
+                        });
                 }
                 case CHESSBOARD_STATE -> {
+                    logger.info("Starting CHESSBOARD_STATE for Game: {}", getCode());
                     res.setCode(RequestCodes.CHESSBOARD_STATE_RESULT);
                     res.setData(chessEngine.chessBoard.getState());
                     res.send(session, message);
                 }
-                case REQUEST_UPGRADE -> {
-                    res.setCode(RequestCodes.REQUEST_UPGRADE_RESULT);
-                    int[] selection = Message.mapper.readValue(message.getData(), int[].class);
-                    Pioni p = chessEngine.chessBoard.getPioniAt(Utilities.int2Char(selection[0]),selection[1]);
-                    String upgradeTo = "";
-                    if (selection[2] == 0) upgradeTo = "Alogo";
-                    else if (selection[2] == 1) upgradeTo = "Pyrgos";
-                    else if (selection[2] == 2) upgradeTo = "Stratigos";
-                    else if (selection[2] == 3) upgradeTo = "Vasilissa";
-                    boolean result = chessEngine.upgradePioni(p,upgradeTo);
-                    res.setData(result);
-                    res.send(session, message);
-                    if (!result) return;
-                    chessEngine.checkGameEnd(p.getIsWhite());
-                    Message notifyPlayer = new Message();
-                    notifyPlayer.setCode(RequestCodes.ENEMY_MOVE);
-                    notifyPlayer.setData(false);
-                    notifyPlayer.send(session.equals(white) ? black : white,null);
-                }
             }
         } catch (Exception e) {
-            System.err.println(e.getMessage());
+           throw  new RuntimeException(e);
         }
     }
+
+    private void finishUpMove(Message message, Session session, Message res, ArrayList<Pioni> moved){
+        try {
+            res.setData(Message.mapper.writeValueAsString(moved));
+            res.setCode(RequestCodes.REQUEST_MOVE_RESULT);
+            res.send(session, message);
+            if (moved == null || moved.isEmpty()) return;
+            chessEngine.checkGameEnd(session.equals(white));
+            if (session.equals(white) != chessEngine.chessBoard.getWhiteTurn() && !vsAI) notifyEnemyMove(session.equals(white),true);
+            else if (vsAI && chessEngine.toBeUpgraded == null) AIMove();
+        } catch (JsonProcessingException e){
+            logger.error("Error trying to finish up move:", e);
+        }
+    }
+
+    public void AIMove(){
+        Thread thread = new Thread(() -> {
+            boolean currentTurn = chessEngine.chessBoard.getWhiteTurn();
+            String bestMove = client.getBestMove(chessEngine.toFen(),chessEngine.getWhiteRemaining(), chessEngine.getBlackRemaining());
+            if (bestMove == null) {
+                logger.error("Error trying to get best move");
+                return;
+            }
+            bestMove = bestMove.toUpperCase();
+            System.out.println(bestMove);
+            char xOrig = bestMove.charAt(0);
+            int yOrig = Character.getNumericValue(bestMove.charAt(1));
+            char xDest = bestMove.charAt(2);
+            int yDest = Character.getNumericValue(bestMove.charAt(3));
+
+            chessEngine.nextMove(xOrig,yOrig,xDest,yDest);
+            if (bestMove.length() > 4) {
+                Map<Character, String> promotionMap = Map.of(
+                        'Q', "Vasilissa",
+                        'B', "Stratigos",
+                        'N', "Alogo",
+                        'R', "Pyrgos"
+                );
+                char upgrade = bestMove.charAt(4);
+                String promotionType = promotionMap.get(upgrade);
+                if (promotionType != null) {
+                    Pioni p = chessEngine.getBoard().getPioniAt(xDest, yDest);
+                    chessEngine.upgradePioni(p, promotionType);
+                } else logger.error("Invalid promotion piece: {}", upgrade);
+            }
+            chessEngine.checkGameEnd(currentTurn);
+            Message notifyPlayer = new Message();
+            notifyPlayer.setCode(RequestCodes.ENEMY_MOVE);
+            notifyPlayer.setData(true);
+            notifyPlayer.send(white,null);
+
+        });
+        thread.start();
+
+    }
+    public CompletableFuture<String> requestUpgrade(boolean white){
+        CompletableFuture<String> future = new CompletableFuture<>();
+        Message message = new Message();
+        message.setCode(RequestCodes.REQUEST_UPGRADE);
+        message.setData(white);
+        message.send(white ? this.white : this.black,null);
+        message.onReply(res-> future.complete(res.getData()));
+        return future;
+    }
+    public void notifyEnemyMove(boolean isWhite, boolean shouldSwitch){
+        Message notifyPlayer = new Message();
+        notifyPlayer.setCode(RequestCodes.ENEMY_MOVE);
+        notifyPlayer.setData(shouldSwitch);
+        notifyPlayer.send(isWhite ? black : white,null);
+    }
+    public void setVsAI(boolean vsAI){ this.vsAI = vsAI; }
+    public boolean getVsAI(){ return vsAI; }
     public static String generateCode() {
         StringBuilder word = new StringBuilder();
         Random random = new Random();
@@ -210,8 +310,10 @@ public class Game implements WebSocketMessageListener {
     @Override
     public void onCloseReceived(Session session) {
         if (session == white || session == black) {
+            System.out.println("Closing session");
             state = State.PLAYER_EXITED;
             games.remove(this);
+            if (vsAI) client.stopEngine();
         }
     }
     @Override

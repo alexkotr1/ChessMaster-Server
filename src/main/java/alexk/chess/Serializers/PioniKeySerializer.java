@@ -18,7 +18,9 @@ public class PioniKeySerializer extends JsonSerializer<Pioni> {
                 .append(value.getXPos()).append(delimiter)
                 .append(value.getYPos()).append(delimiter)
                 .append(value.getID()).append(delimiter)
-                .append(value.getCaptured()).append(delimiter);
+                .append(value.getCaptured()).append(delimiter)
+                .append(value.getMoved()).append(delimiter)
+                .append(value.getKingSide()).append(delimiter);
         gen.writeFieldName(keyBuilder.toString());
     }
 }

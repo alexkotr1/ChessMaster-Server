@@ -9,7 +9,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 public class Vasilias extends Pioni implements Serializable {
-    private boolean moved;
     @JsonCreator
     public Vasilias(
             @JsonProperty("isWhite") Boolean isWhite,
@@ -17,9 +16,11 @@ public class Vasilias extends Pioni implements Serializable {
             @JsonProperty("xpos") char initialX,
             @JsonProperty("ypos") int initialY,
             @JsonProperty("id") String id,
-            @JsonProperty("captured") Boolean captured
+            @JsonProperty("captured") Boolean captured,
+            @JsonProperty("moved") Boolean moved,
+            @JsonProperty("kingSide") Boolean kingSide
     ) {
-        super(isWhite, chessBoard, initialX, initialY, id, captured);
+        super(isWhite, chessBoard, initialX, initialY, id, captured, moved, null);
     }
 
     @Override
@@ -43,7 +44,4 @@ public class Vasilias extends Pioni implements Serializable {
         }
         return xDiff <= 1 && yDiff <= 1 && (xDiff != 0 || yDiff != 0) && (this.getChessBoard().getPioniAt(x,y) == null || this.getChessBoard().getPioniAt(x,y).getIsWhite() != getIsWhite());
     }
-
-    public void setMoved(boolean moved) {this.moved = moved;}
-    public boolean getMoved() {return moved;}
 }

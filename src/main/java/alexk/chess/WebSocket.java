@@ -6,28 +6,30 @@ import jakarta.websocket.OnMessage;
 import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.glassfish.tyrus.server.Server;
-
-import java.io.IOException;
 import java.util.*;
 
 @ServerEndpoint("/chat")
 public class WebSocket {
+    private static final Logger logger = LogManager.getLogger(WebSocket.class);
     @OnOpen
-    public void onOpen(Session session) {
-        System.out.println("Client connected: " + session.getId());
-    }
+    public void onOpen(Session session) { logger.info("Client connected: {}", session.getId()); }
 
     @OnMessage
     public void onMessage(String message, Session session ) {
+        logger.info("Received message in Websocket: {}", message);
         Game game = Game.findGameBySession(session);
         Message m = Message.parse(message);
         if (m == null) return;
         if (Message.pending.containsKey(m.getMessageID())) {
+            logger.info("Replying to message ID: {}", m.getMessageID());
             Message reply = Message.pending.get(m.getMessageID());
-            reply.triggerReplyCallback(reply);
+            reply.triggerReplyCallback(m);
             Message.pending.remove(reply.getMessageID());
-        } else Message.pending.put(m.getMessageID(), m);
+            return;
+        }
         if (game != null) game.onMessageReceived(m,session);
         if (game == null && m.getCode() == RequestCodes.JOIN_GAME){
             Game res = Game.join(session, m.getData());
@@ -43,10 +45,20 @@ public class WebSocket {
         } else if (game == null && m.getCode() == RequestCodes.HOST_GAME){
             try {
                 int time = Message.mapper.readValue(m.getData(),int.class);
-                game = new Game(Game.generateCode(),session,time);
+                game = new Game(Game.generateCode(),session,time,false);
                 Message res = new Message();
                 res.setCode(RequestCodes.HOST_GAME_RESULT);
                 res.setData(game.getCode());
+                res.send(session,m);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        } else if (game == null && m.getCode() == RequestCodes.START_AI_GAME){
+            try {
+                int time = Message.mapper.readValue(m.getData(),int.class);
+                game = new Game(Game.generateCode(),session,time,true);
+                game.start();
+                Message res = new Message();
                 res.send(session,m);
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
@@ -56,7 +68,9 @@ public class WebSocket {
 
     @OnClose
     public void onClose(Session session) {
-        System.out.println("Client disconnected: " + session.getId());
+        logger.info("Client disconnected: {}", session.getId());
+        Game g = Game.findGameBySession(session);
+        if (g != null) g.onCloseReceived(session);
     }
 
     public static void main(String[] args) {
@@ -66,8 +80,8 @@ public class WebSocket {
 
         try {
             server.start();
-            System.out.println("WebSocket server started on ws://localhost:8025/chat");
-            System.out.println("Press Enter to stop the server...");
+            logger.info("WebSocket server started on ws://localhost:8025/chat");
+            logger.info("Press Enter to stop the server...");
             System.in.read();
         } catch (Exception e) {
             e.printStackTrace();

@@ -16,9 +16,11 @@ public class Vasilissa extends Pioni implements Serializable {
             @JsonProperty("xpos") char initialX,
             @JsonProperty("ypos") int initialY,
             @JsonProperty("id") String id,
-            @JsonProperty("captured") Boolean captured
+            @JsonProperty("captured") Boolean captured,
+            @JsonProperty("moved") Boolean moved,
+            @JsonProperty("kingSide") Boolean kingSide
     ) {
-        super(isWhite, chessBoard, initialX, initialY, id, captured);
+        super(isWhite, chessBoard, initialX, initialY, id, captured, null, null);
     }
 
     @Override
