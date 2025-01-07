@@ -123,8 +123,8 @@ public class ChessEngine {
         return chessBoard.getPionia().stream().filter(p -> p.getType().equals("Stratiotis") && p.getIsWhite() == white && p.getYPos() == (p.getIsWhite() ? 8 : 1)).findFirst().orElse(null);
     }
     public void switchTurn(){
-        toggleTimer();
         chessBoard.setWhiteTurn(!chessBoard.getWhiteTurn());
+        toggleTimer();
     }
     private void toggleTimer(){
         if (chessBoard.getWhiteTurn()){
