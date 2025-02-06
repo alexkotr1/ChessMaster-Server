@@ -14,7 +14,6 @@ public class Client {
 
     public void startEngine() {
         try {
-            System.err.println("STARTING");
             Process engineProcess = Runtime.getRuntime().exec(PATH);
             processReader = new BufferedReader(new InputStreamReader(
                     engineProcess.getInputStream()));
@@ -60,7 +59,7 @@ public class Client {
             System.out.println("White time: " + whiteTime);
             System.out.println("Black time: " + blackTime);
             sendCommand("position fen " + fen);
-            sendCommand("go movetime 1000");
+            sendCommand("go movetime 10");
             String output = getOutput();
             if (output.contains("bestmove")) {
                 String[] parts = output.split("bestmove ");

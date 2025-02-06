@@ -34,6 +34,8 @@ public class Message {
     private String data;
     private String messageID;
     private Pioni pioni;
+    private String fen;
+
 
     public String getMessageID() {
         return messageID;
@@ -51,6 +53,8 @@ public class Message {
         this.code = code;
     }
 
+    public void setFen(String fen) { this.fen = fen; }
+    public String getFen() { return fen; }
     public String getData() {
         return data;
     }
@@ -124,6 +128,7 @@ public class Message {
                 ", data='" + data + '\'' +
                 ", messageID='" + messageID + '\'' +
                 ", pioni='" + pioni + '\'' +
+                ", fen='" + fen + '\'' +
                 '}';
     }
 }

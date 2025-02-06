@@ -127,7 +127,7 @@ public class ChessBoard {
                 }
             }
         }
-        return king != null && rook != null && !king.getMoved() && !rook.getMoved();
+        return king != null && rook != null && !king.getMoved() && !rook.getMoved() && !rook.getCaptured();
     }
     @Override
     protected ChessBoard clone() {

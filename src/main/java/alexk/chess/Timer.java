@@ -52,12 +52,9 @@ public abstract class Timer {
     protected abstract void onFinish();
 
     public long getRemainingTime(){
-        if(this.duration <0){
-            return Timer.DURATION_INFINITY;
-        }
-        else{
-            return duration-elapsedTime;
-        }
+        if(this.duration <0) return Timer.DURATION_INFINITY;
+        else return duration - elapsedTime;
+
     }
 
 }

@@ -129,6 +129,12 @@ public class Game implements WebSocketMessageListener {
                     res.setData(pionia);
                     res.send(session, message);
                 }
+                case REQUEST_FEN ->{
+                    logger.info("Starting REQUEST_FEN for Game: {}", getCode());
+                    res.setCode(RequestCodes.REQUEST_FEN_RESULT);
+                    res.setData(chessEngine.toFen());
+                    res.send(session, message);
+                }
                 case GET_MOVES_REMAINING -> {
                     logger.info("Starting GET_MOVES_REMAINING for Game: {}", getCode());
                     res.setCode(RequestCodes.GET_MOVES_REMAINING_RESULT);
@@ -231,6 +237,7 @@ public class Game implements WebSocketMessageListener {
         try {
             res.setData(Message.mapper.writeValueAsString(moved));
             res.setCode(RequestCodes.REQUEST_MOVE_RESULT);
+            res.setFen(chessEngine.toFen());
             res.send(session, message);
             if (moved == null || moved.isEmpty()) return;
             chessEngine.checkGameEnd(session.equals(white));
@@ -294,6 +301,7 @@ public class Game implements WebSocketMessageListener {
         Message notifyPlayer = new Message();
         notifyPlayer.setCode(RequestCodes.ENEMY_MOVE);
         notifyPlayer.setData(shouldSwitch);
+        notifyPlayer.setFen(chessEngine.toFen());
         notifyPlayer.send(isWhite ? black : white,null);
     }
     public void setVsAI(boolean vsAI){ this.vsAI = vsAI; }

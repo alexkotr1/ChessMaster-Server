@@ -250,13 +250,11 @@ public class ChessEngine {
         boolean blackKingSideRights = getBoard().castlingRights(false,true);
         boolean blackQueenSideRights = getBoard().castlingRights(false,false);
 
-//        if (whiteKingSideRights) fen.append("K");
-//        if (whiteQueenSideRights) fen.append("Q");
-//        if (blackKingSideRights) fen.append("k");
-//        if (blackQueenSideRights) fen.append("q");
-        fen.append("-");
-
-        //if (!whiteKingSideRights && !whiteQueenSideRights && !blackKingSideRights && !blackQueenSideRights) fen.append("-");
+        if (whiteKingSideRights) fen.append("K");
+        if (whiteQueenSideRights) fen.append("Q");
+        if (blackKingSideRights) fen.append("k");
+        if (blackQueenSideRights) fen.append("q");
+        if (!whiteKingSideRights && !whiteQueenSideRights && !blackKingSideRights && !blackQueenSideRights) fen.append("-");
 
         fen
                 .append(" ")
