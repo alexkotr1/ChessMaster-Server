@@ -135,6 +135,12 @@ public class Game implements WebSocketMessageListener {
                     res.setData(chessEngine.toFen());
                     res.send(session, message);
                 }
+                case REQUEST_BOARD_STATE ->{
+                    logger.info("Starting REQUEST_BOARD_STATE for Game: {}", getCode());
+                    res.setCode(RequestCodes.REQUEST_FEN_RESULT);
+                    res.setData(chessEngine.getBoardState());
+                    res.send(session, message);
+                }
                 case GET_MOVES_REMAINING -> {
                     logger.info("Starting GET_MOVES_REMAINING for Game: {}", getCode());
                     res.setCode(RequestCodes.GET_MOVES_REMAINING_RESULT);
@@ -158,7 +164,7 @@ public class Game implements WebSocketMessageListener {
                 case IS_GAME_ENDED ->{
                     logger.info("Starting IS_GAME_ENDED for Game: {}", getCode());
                     res.setCode(RequestCodes.IS_GAME_ENDED_RESULT);
-                    res.setData(chessEngine.chessBoard.getGameEnded());
+                    res.setData(chessEngine.chessBoard.getGameEnded() ? chessEngine.chessBoard.getWinner() : "false");
                     res.send(session, message);
                 }
                 case CHECKMATE -> {

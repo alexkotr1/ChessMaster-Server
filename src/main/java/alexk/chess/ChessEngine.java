@@ -266,5 +266,15 @@ public class ChessEngine {
 
         return fen.toString();
     }
+    public HashMap<String, String> getBoardState() {
+        ArrayList<Pioni> pionia = getBoard().getPionia();
+        HashMap<String, String> boardState = new HashMap<>();
+        for (Pioni p : pionia) {
+            String notation = (p.getIsWhite() ? "w" : "b") + p.print().toUpperCase();
+            String pos = String.valueOf(p.getXPos()) + p.getYPos();
+            boardState.put(pos, notation);
+        }
+        return boardState;
+    }
 
 }
