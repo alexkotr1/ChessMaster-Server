@@ -59,7 +59,7 @@ public class Client {
             System.out.println("White time: " + whiteTime);
             System.out.println("Black time: " + blackTime);
             sendCommand("position fen " + fen);
-            sendCommand("go movetime 10");
+            sendCommand("go movetime 1000");
             String output = getOutput();
             if (output.contains("bestmove")) {
                 String[] parts = output.split("bestmove ");
