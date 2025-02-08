@@ -76,7 +76,7 @@ public class WebSocket {
     public static void main(String[] args) {
         Set<Class<?>> endpointClasses = Collections.singleton(WebSocket.class);
         Map<String, Object> properties = new HashMap<>();
-        Server server = new Server("localhost", 8025, "/", properties, endpointClasses);
+        Server server = new Server("localhost", 8080, "/", properties, endpointClasses);
 
         try {
             server.start();
