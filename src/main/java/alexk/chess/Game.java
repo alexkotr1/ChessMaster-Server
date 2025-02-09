@@ -233,6 +233,12 @@ public class Game implements WebSocketMessageListener {
                     res.setData(chessEngine.chessBoard.getState());
                     res.send(session, message);
                 }
+                case CHAT_MESSAGE -> {
+                    logger.info("Starting CHAT_MESSAGE for Game: {}", getCode());
+                    res.setCode(RequestCodes.CHAT_MESSAGE_NOTIFICATION);
+                    res.setData(message.getData());
+                    res.send(session.equals(white) ? black : white,null);
+                }
             }
         } catch (Exception e) {
            throw  new RuntimeException(e);
