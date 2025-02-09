@@ -76,11 +76,12 @@ public class WebSocket {
     public static void main(String[] args) {
         Set<Class<?>> endpointClasses = Collections.singleton(WebSocket.class);
         Map<String, Object> properties = new HashMap<>();
-        Server server = new Server("localhost", 8080, "/", properties, endpointClasses);
-
+        String host = "0.0.0.0";
+        int port = 8080;
+        Server server = new Server(host, port, "/", properties, endpointClasses);
         try {
             server.start();
-            logger.info("WebSocket server started on ws://localhost:8025/chat");
+            logger.info("WebSocket server started on ws://{}:{}/chat", host, port);
             logger.info("Press Enter to stop the server...");
             System.in.read();
         } catch (Exception e) {
