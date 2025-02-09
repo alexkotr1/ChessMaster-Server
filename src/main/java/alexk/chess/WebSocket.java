@@ -11,7 +11,7 @@ import org.apache.logging.log4j.Logger;
 import org.glassfish.tyrus.server.Server;
 import java.util.*;
 
-@ServerEndpoint("/chat")
+@ServerEndpoint("/")
 public class WebSocket {
     private static final Logger logger = LogManager.getLogger(WebSocket.class);
     @OnOpen
