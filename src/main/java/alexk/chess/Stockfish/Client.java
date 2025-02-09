@@ -1,5 +1,9 @@
 package alexk.chess.Stockfish;
 
+import alexk.chess.Game;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -9,6 +13,7 @@ public class Client {
 
     private BufferedReader processReader;
     private OutputStreamWriter processWriter;
+    private static final Logger logger = LogManager.getLogger(Client.class);
 
     private static final String PATH = "lc0";
 
@@ -43,7 +48,7 @@ public class Client {
                 if (processReader.ready()) {
                     String line = processReader.readLine();
                     buffer.append(line).append("\n");
-                    System.out.print(buffer);
+                    logger.info(buffer);
                     if (line.startsWith("bestmove")) break;
                 }
             }
@@ -55,11 +60,10 @@ public class Client {
 
     public String getBestMove(String fen, long whiteTime, long blackTime) {
         try {
-            System.out.println("FEN: " + fen);
-            System.out.println("White time: " + whiteTime);
-            System.out.println("Black time: " + blackTime);
+            logger.info("White time: {}", whiteTime);
+            logger.info("Black time: {}", blackTime);
             sendCommand("position fen " + fen);
-            sendCommand("go movetime 1000");
+            sendCommand("go wtime " + whiteTime + " btime" + blackTime);
             String output = getOutput();
             if (output.contains("bestmove")) {
                 String[] parts = output.split("bestmove ");
