@@ -21,7 +21,6 @@ public class Pyrgos extends Pioni implements Serializable {
             @JsonProperty("kingSide") Boolean kingSide
     ) {
         super(isWhite, chessBoard, initialX, initialY, id, captured, moved, kingSide);
-
     }
 
     @Override

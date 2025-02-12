@@ -3,11 +3,14 @@ package alexk.chess;
 
 import alexk.chess.Pionia.Pioni;
 import alexk.chess.Stockfish.Client;
+import alexk.chess.Stockfish.LocalClient;
+import alexk.chess.Stockfish.RemoteClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.websocket.Session;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.rmi.Remote;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -25,7 +28,7 @@ public class Game implements WebSocketMessageListener {
     private final int timerMinutes;
     private Boolean vsAI;
     public State state;
-    private Client client;
+    private RemoteClient client;
     public Game(String code, Session white, int timerMinutes, boolean vsAI) {
         this.timerMinutes = timerMinutes;
         chessEngine = new ChessEngine(white,null, timerMinutes, vsAI);
@@ -37,7 +40,7 @@ public class Game implements WebSocketMessageListener {
         state = State.HOST_JOINED;
         logger.info("New Game with ID: {} Code: {} vsAI: {}", uuid, code, vsAI);
         if (vsAI){
-            client = new Client();
+            client = new RemoteClient();
             client.startEngine();
         }
     }

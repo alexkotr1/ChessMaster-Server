@@ -82,10 +82,18 @@ public class ChessEngine {
         ArrayList<Pioni> moved = new ArrayList<>();
         moved.add(p);
         Pioni pioniAtDest = chessBoard.getPioniAt(xDest,yDest);
+        int origX = Utilities.char2Int(xOrig);
+        int destX = Utilities.char2Int(xDest);
 
-        if (p.getType().equals("Vasilias") && pioniAtDest != null && pioniAtDest.getType().equals("Pyrgos") && p.getIsWhite() == pioniAtDest.getIsWhite()){
-            moved.add(pioniAtDest);
-            int[] dest = pioniAtDest.getPosition();
+        if (p.getType().equals("Vasilias") && Math.abs(origX - destX) == 2 && yOrig == yDest){
+            Pyrgos pyrgos = (Pyrgos) getBoard().getPionia().stream()
+                    .filter(pioni -> pioni.getIsWhite() == p.getIsWhite() &&
+                            pioni.getType().equals("Pyrgos") &&
+                            pioni.getKingSide() == destX > origX)
+                    .toList().getFirst();
+            if (pyrgos == null) return moved;
+            moved.add(pyrgos);
+            int[] dest = pyrgos.getPosition();
             int[] orig = p.getPosition();
             switchTurn();
             chessBoard.move(xOrig,yOrig,Utilities.int2Char(dest[0] > orig[0] ? orig[0] + 2 : orig[0] - 2),yOrig);

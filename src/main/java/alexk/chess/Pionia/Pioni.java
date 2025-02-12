@@ -81,7 +81,7 @@ public abstract class Pioni {
         if (x2 < 0 || x2 > 8 || y2 < 0 || y2 > 8) return null;
         ArrayList<int[]> route = new ArrayList<>();
         //straight movement
-        if ((y1 == y2 || x1 == x2) && (type.equals("Pyrgos") || type.equals("Vasilissa") || type.equals("Stratiotis"))){
+        if ((y1 == y2 || x1 == x2) && (type.equals("Pyrgos") || type.equals("Vasilissa") || type.equals("Stratiotis") || type.equals("Vasilias"))){
             boolean x1Equalsx2 = x1 == x2;
             int diff = Math.abs((x1 == x2 ? y1 - y2 : x1 - x2));
             for (int i = 0;i<=diff;i++){
