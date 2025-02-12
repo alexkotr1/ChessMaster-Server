@@ -6,6 +6,9 @@ import alexk.chess.Stockfish.Client;
 import alexk.chess.Stockfish.LocalClient;
 import alexk.chess.Stockfish.RemoteClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.websocket.Session;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,6 +31,7 @@ public class Game implements WebSocketMessageListener {
     private final int timerMinutes;
     private Boolean vsAI;
     public State state;
+    private ObjectMapper mapper = new ObjectMapper();
     private RemoteClient client;
     public Game(String code, Session white, int timerMinutes, boolean vsAI) {
         this.timerMinutes = timerMinutes;
@@ -239,8 +243,12 @@ public class Game implements WebSocketMessageListener {
                 case CHAT_MESSAGE -> {
                     logger.info("Starting CHAT_MESSAGE for Game: {}", getCode());
                     res.setCode(RequestCodes.CHAT_MESSAGE_NOTIFICATION);
-                    res.setData(message.getData());
-                    res.send(session.equals(white) ? black : white,null);
+                    ObjectNode msg = mapper.createObjectNode();
+                    msg.put("sender",session.equals(white) ? "white" : "black");
+                    msg.put("text", message.getData());
+                    res.setData(msg);
+                    res.send(white, message);
+                    res.send(black, message);
                 }
             }
         } catch (Exception e) {
