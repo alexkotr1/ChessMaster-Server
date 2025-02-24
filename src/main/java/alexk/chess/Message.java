@@ -36,7 +36,6 @@ public class Message {
     private Pioni pioni;
     private String fen;
 
-
     public String getMessageID() {
         return messageID;
     }

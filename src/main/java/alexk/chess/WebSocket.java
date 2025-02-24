@@ -30,38 +30,45 @@ public class WebSocket {
             Message.pending.remove(reply.getMessageID());
             return;
         }
-        if (game != null) game.onMessageReceived(m,session);
-        if (game == null && m.getCode() == RequestCodes.JOIN_GAME){
-            Game res = Game.join(session, m.getData());
-            Message resMessage = new Message();
-            resMessage.setCode(res != null ? RequestCodes.JOIN_GAME_SUCCESS : RequestCodes.JOIN_GAME_FAILURE);
-            resMessage.setData(res != null ? res.getChessEngine().getMinutesAllowed() : 99);
-            resMessage.send(session, m);
-            if (res == null) return;
-            Message notifyPlayer = new Message();
-            notifyPlayer.setCode(RequestCodes.SECOND_PLAYER_JOINED);
-            notifyPlayer.send(res.getWhite(),m);
-            res.start();
-        } else if (game == null && m.getCode() == RequestCodes.HOST_GAME){
-            try {
-                int time = Message.mapper.readValue(m.getData(),int.class);
-                game = new Game(Game.generateCode(),session,time,false);
-                Message res = new Message();
-                res.setCode(RequestCodes.HOST_GAME_RESULT);
-                res.setData(game.getCode());
-                res.send(session,m);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+        if (game != null && m.getCode() != RequestCodes.JOIN_GAME && m.getCode() != RequestCodes.HOST_GAME && m.getCode() != RequestCodes.START_AI_GAME) {
+            game.onMessageReceived(m,session);
+            return;
+        }
+        switch (m.getCode()){
+            case RequestCodes.JOIN_GAME -> {
+                Game res = Game.join(session, m.getData());
+                Message resMessage = new Message();
+                resMessage.setCode(res != null ? RequestCodes.JOIN_GAME_SUCCESS : RequestCodes.JOIN_GAME_FAILURE);
+                resMessage.setData(res != null ? res.getChessEngine().getMinutesAllowed() : 99);
+                resMessage.send(session, m);
+                if (res == null) return;
+                Message notifyPlayer = new Message();
+                notifyPlayer.setCode(RequestCodes.SECOND_PLAYER_JOINED);
+                notifyPlayer.send(res.getWhite(),m);
+                res.start();
             }
-        } else if (game == null && m.getCode() == RequestCodes.START_AI_GAME){
-            try {
-                int time = Message.mapper.readValue(m.getData(),int.class);
-                game = new Game(Game.generateCode(),session,time,true);
-                game.start();
-                Message res = new Message();
-                res.send(session,m);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+            case RequestCodes.HOST_GAME ->{
+                try {
+                    int time = Message.mapper.readValue(m.getData(),int.class);
+                    game = new Game(Game.generateCode(),session,time,false);
+                    Message res = new Message();
+                    res.setCode(RequestCodes.HOST_GAME_RESULT);
+                    res.setData(game.getCode());
+                    res.send(session,m);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            case RequestCodes.START_AI_GAME -> {
+                try {
+                    int time = Message.mapper.readValue(m.getData(),int.class);
+                    game = new Game(Game.generateCode(),session,time,true);
+                    game.start();
+                    Message res = new Message();
+                    res.send(session,m);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }

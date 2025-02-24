@@ -13,6 +13,7 @@ import jakarta.websocket.Session;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.reflect.Array;
 import java.rmi.Remote;
 import java.util.*;
 import java.util.concurrent.*;
@@ -204,35 +205,35 @@ public class Game implements WebSocketMessageListener {
                         finishUpMove(message, session, res, moved);
                         return;
                     }
-                        char origX = Utilities.int2Char(move[0][0]);
-                        int origY = move[0][1];
-                        char destX = Utilities.int2Char(move[1][0]);
-                        int destY = move[1][1];
-                        Pioni p = chessEngine.getBoard().getPioniAt(origX, origY);
-                        if (!chessEngine.legalMove(origX, origY, destX, destY)) {
-                            finishUpMove(message, session, res, moved);
-                            return;
-                        }
-                        moved = chessEngine.nextMove(origX,origY,destX,destY);
-                        Pioni upgradable = chessEngine.toBeUpgraded;
+                    char origX = Utilities.int2Char(move[0][0]);
+                    int origY = move[0][1];
+                    char destX = Utilities.int2Char(move[1][0]);
+                    int destY = move[1][1];
+                    Pioni p = chessEngine.getBoard().getPioniAt(origX, origY);
+                    if (!chessEngine.legalMove(origX, origY, destX, destY)) {
                         finishUpMove(message, session, res, moved);
-                        if (upgradable == null) return;
-                        CompletableFuture<String> future = requestUpgrade(p.getIsWhite());
-                        future.thenAcceptAsync(str->{
-                            logger.info("Upgrading Pioni: {} in Game: {}", str, getCode());
-                            try {
-                                if (chessEngine.upgradePioni(upgradable,future.get())){
-                                    chessEngine.switchTurn();
-                                    notifyEnemyMove(true,false);
-                                    notifyEnemyMove(false,false);
-                                    chessEngine.toBeUpgraded = null;
-                                    chessEngine.checkGameEnd(session.equals(white));
-                                    if (vsAI) AIMove();
-                                }
-                            } catch (InterruptedException | ExecutionException e) {
-                                logger.error("Error trying to upgrade Pioni:", e);
+                        return;
+                    }
+                    moved = chessEngine.nextMove(origX,origY,destX,destY);
+                    Pioni upgradable = chessEngine.toBeUpgraded;
+                    finishUpMove(message, session, res, moved);
+                    if (upgradable == null) return;
+                    CompletableFuture<String> future = requestUpgrade(p.getIsWhite());
+                    future.thenAcceptAsync(str->{
+                        logger.info("Upgrading Pioni: {} in Game: {}", str, getCode());
+                        try {
+                            if (chessEngine.upgradePioni(upgradable,future.get())){
+                                chessEngine.switchTurn();
+                                notifyEnemyMove(true,false);
+                                notifyEnemyMove(false,false);
+                                chessEngine.toBeUpgraded = null;
+                                chessEngine.checkGameEnd(session.equals(white));
+                                if (vsAI) AIMove();
                             }
-                        });
+                        } catch (InterruptedException | ExecutionException e) {
+                            logger.error("Error trying to upgrade Pioni:", e);
+                        }
+                    });
                 }
                 case CHESSBOARD_STATE -> {
                     logger.info("Starting CHESSBOARD_STATE for Game: {}", getCode());
@@ -285,8 +286,12 @@ public class Game implements WebSocketMessageListener {
             int yOrig = Character.getNumericValue(bestMove.charAt(1));
             char xDest = bestMove.charAt(2);
             int yDest = Character.getNumericValue(bestMove.charAt(3));
-
-            chessEngine.nextMove(xOrig,yOrig,xDest,yDest);
+            ArrayList<Pioni> moved = chessEngine.nextMove(xOrig,yOrig,xDest,yDest);
+            if (moved == null || moved.isEmpty()) {
+                chessEngine.makeRandomMove(false);
+                logger.error("Illegal move by chess engine! [{},{}] -> [{},{}]", xOrig, yOrig, xDest, yDest);
+                return;
+            }
             if (bestMove.length() > 4) {
                 Map<Character, String> promotionMap = Map.of(
                         'Q', "Vasilissa",

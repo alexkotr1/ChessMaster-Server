@@ -28,10 +28,9 @@ public class Alogo extends Pioni implements Serializable {
     public boolean isLegalMove(char x, int y) {
         if (!isWithinBounds(x,y)) return false;
         int destX = Utilities.char2Int(x);
-        int destY = y;
         int currentX = Utilities.char2Int(getXPos());
         int currentY = getYPos();
         final int[][] allowed = {{2,-1},{-1,-2},{1,-2},{2,-1},{2,1},{1,2},{-1,2},{-2,1},{-2,-1}};
-        return Arrays.stream(allowed).anyMatch(arr -> currentX + arr[0] == destX && currentY + arr[1] == destY) && (this.getChessBoard().getPioniAt(x,y) == null || this.getChessBoard().getPioniAt(x,y).getIsWhite() != getIsWhite());
+        return Arrays.stream(allowed).anyMatch(arr -> currentX + arr[0] == destX && currentY + arr[1] == y) && (this.getChessBoard().getPioniAt(x,y) == null || this.getChessBoard().getPioniAt(x,y).getIsWhite() != getIsWhite());
     }
 }

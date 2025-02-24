@@ -50,7 +50,6 @@ public abstract class Pioni {
         this.moved = moved;
         this.kingSide = kingSide;
         if (captured != null) this.captured = captured;
-
         switch (this.type){
             case "Alogo":
                 this.imagePath = this.isWhite ? "white knight.png" : "black knight.png";

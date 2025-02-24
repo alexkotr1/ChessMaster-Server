@@ -152,9 +152,20 @@ public class ChessEngine {
         else if (stalemateCheck(!white) || chessBoard.getMovesRemaining() == 0) {
             notifyKingCheck(!white,false);
             getBoard().setGameEnded(true, Winner.Draw);
+        } else if (chessBoard.getPionia().stream().filter(p -> !p.getCaptured()).toArray().length == 2){
+            getBoard().setGameEnded(true, Winner.Draw);
         }
         else notifyKingCheck(!white,false);
         notifyKingCheck(white, checkKingMat(chessBoard, white));
+    }
+    public void makeRandomMove(boolean white){
+        ArrayList<Pioni> pionia = chessBoard.getPionia().stream().filter(p -> p.getIsWhite() == white).collect(Collectors.toCollection(ArrayList::new));
+        for (Pioni p : pionia) {
+            for (int[] pos : allPositions){
+                ArrayList<Pioni> moved = nextMove(p.getXPos(),p.getYPos(),Utilities.int2Char(pos[0]),pos[1]);
+                if (moved != null && !moved.isEmpty()) return;
+            }
+        }
     }
     public boolean upgradePioni(Pioni p, String type){
         if (p.getType().equals("Stratiotis") && ((p.getIsWhite() && p.getYPos() == 8) || (!p.getIsWhite() && p.getYPos() == 1))) {

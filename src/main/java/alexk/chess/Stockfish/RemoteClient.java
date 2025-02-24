@@ -43,6 +43,9 @@ public class RemoteClient extends Client {
     @Override
     public String getBestMove(String fen, long whiteTime, long blackTime) {
         try {
+            if (!session.isOpen()) {
+                startEngine();
+            }
             ObjectNode req = mapper.createObjectNode();
             req.put("fen", fen);
             req.put("depth", 18);
